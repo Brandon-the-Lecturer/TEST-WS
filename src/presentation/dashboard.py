@@ -65,7 +65,8 @@ def main():
             st.write(pbp_data_with_pos)
         
         with st.expander("Data Product Type 3: Algorithm"):
-            st.write("Yo")
+            pbp_data_with_xp = LogicService.get_pbp_data_with_xp(selected_season, selected_week, selected_game)
+            st.write(pbp_data_with_xp)
         
         with st.expander("Data Product Type 4: Supported Decision"):
             st.write("Yo")
