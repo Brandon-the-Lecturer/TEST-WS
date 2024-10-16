@@ -1,7 +1,9 @@
 # Dependencies
 import streamlit as st
 
-import data.play_by_play as DataService 
+import data.play_by_play as DataService_PBP 
+import data.drives as DataService_Drives 
+import logic.pbp as LogicService
 
 # Variables
 SEASON_MAX = 2024
@@ -30,17 +32,18 @@ def main():
     with st.sidebar:
         st.header(SIDE_BAR_HEADER)
         
-        selected_season = st.selectbox(label="Season", options=DataService.get_seasons())
-        selected_week = st.selectbox(label="Week", options=DataService.get_week_of_season(season=selected_season))
-        selected_game = st.selectbox(label="Game", options=DataService.get_game_of_week(week=selected_week, season=selected_season), format_func=display_game)
+        selected_season = st.selectbox(label="Season", options=DataService_PBP.get_seasons())
+        selected_week = st.selectbox(label="Week", options=DataService_PBP.get_week_of_season(season=selected_season))
+        selected_game = st.selectbox(label="Game", options=DataService_PBP.get_game_of_week(week=selected_week, season=selected_season), format_func=display_game)
         
-        # selected_season = st.selectbox(label="Season", options=range(SEASON_MAX, SEASON_MIN-1, -1))
-        # selected_week = st.selectbox(label="Week", options=range(GAME_WEEK_MIN, GAME_WEEK_MAX+1))
-        # selected_game = st.selectbox(label="Game", options=GAMES)
 
         team_selection = selected_game.split(TEAM_SELECTION_SPLIT_CHAR)
         scout_team = st.radio(label="Team to scout", options=team_selection)
-
+        
+        if DataService_Drives.check_for_data(selected_season, selected_week, scout_team):
+            st.success("Daten vollständig")
+        else: 
+            st.error("Daten unvollständig")
     
     
     if st.sidebar.button(SIDE_BAR_BUTTON_NAME):
@@ -52,13 +55,14 @@ def main():
         st.write(f"Selected Week: {selected_week}")
         st.write(f"Selected Game: {selected_game}")
         
-        pbp_data = DataService.get_pbp_data(selected_season, selected_week, selected_game)
 
         with st.expander("Data Product Type 1: Raw Data"):            
-            st.dataframe(pbp_data)
+            pbp_data = DataService_PBP.get_pbp_data(selected_season, selected_week, selected_game)
+            st.write(pbp_data)
         
         with st.expander("Data Product Type 2: Aggregates Data"):
-            st.write("Yo")
+            pbp_data_with_pos = LogicService.get_pbp_data(selected_season, selected_week, selected_game)
+            st.write(pbp_data_with_pos)
         
         with st.expander("Data Product Type 3: Algorithm"):
             st.write("Yo")
