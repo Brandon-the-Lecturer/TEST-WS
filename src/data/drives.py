@@ -49,7 +49,7 @@ def _clean_dataset(data: pd.DataFrame) -> pd.DataFrame:
 
 def _add_team_info(data: pd.DataFrame, team: str) -> pd.DataFrame:
     copy_df = data.copy()
-    copy_df["Team"] = team.upper()
+    copy_df["Team"] = team
     return copy_df
 
 def check_for_data(season: int, week: int, team: str) -> bool:
