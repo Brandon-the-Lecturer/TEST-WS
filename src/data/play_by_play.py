@@ -77,6 +77,8 @@ def get_pbp_data(season:int, week: int, game: str) -> pd.DataFrame:
     pbp_data = _clean_dataset(pbp_data)
     pbp_data = _standardize_columns(pbp_data, DTYPES_PBP.keys())
     pbp_data = _change_dtypes(pbp_data, DTYPES_PBP)
+    pbp_data["Home"] = pbp_data["Home"].cummax()
+    pbp_data["Visitors"] = pbp_data["Visitors"].cummax()
 
     return pbp_data
 
