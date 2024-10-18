@@ -4,7 +4,7 @@ import os
 
 
 # Variables
-FILE_DIR_PATH = '/workspaces/TEST-WS/src/data/pbp'
+DATA_DIR_NAME  = 'pbp'
 DTYPES_PBP = {
     'Quarter': int,
     'Time': 'timedelta64[ns]',
@@ -19,7 +19,12 @@ DTYPES_PBP = {
 }
 
 # Functions
-def _get_pbp_file_names(path: str = FILE_DIR_PATH) -> list:
+def _get_data_dir_path():
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    data_directory = os.path.join(current_directory, DATA_DIR_NAME)
+    return data_directory
+
+def _get_pbp_file_names(path: str = _get_data_dir_path()) -> list:
     pbp_file_names = os.listdir(path)
     return [os.path.splitext(datei)[0] for datei in pbp_file_names]
 
@@ -29,11 +34,13 @@ def get_seasons(file_names:list = _get_pbp_file_names()):
 def get_week_of_season(season: int, file_names:list = _get_pbp_file_names()):
     return list(set([int(file_name.split("-")[1]) for file_name in file_names if int(file_name.split("-")[0]) == season ]))
 
-def get_game_of_week(week:int, season: int, file_names:list = _get_pbp_file_names()):
+def get_game_of_week(week:int, season: int):
+    file_names = _get_pbp_file_names()
     return list([file_name.split("-", 2)[2] for file_name in file_names if (int(file_name.split("-")[0]) == season) and (int(file_name.split("-")[1])) == week ])
 
 def _get_game_file(season: int, week: int, game: str) -> str:
-    game_files = os.listdir(FILE_DIR_PATH)
+    path = _get_data_dir_path()
+    game_files = os.listdir(path)
 
     game_file_path = [file for file in game_files 
                 if file.endswith('.csv') 
@@ -69,9 +76,9 @@ def _standardize_columns(data:pd.DataFrame, columns: list) -> pd.DataFrame:
 
 def get_pbp_data(season:int, week: int, game: str) -> pd.DataFrame:
     game_file = _get_game_file(season, week, game)
-    
+    path = _get_data_dir_path()
     # Read Data
-    pbp_data = pd.read_csv(FILE_DIR_PATH+"/"+game_file)
+    pbp_data = pd.read_csv(path+"/"+game_file)
 
     # Clean Data
     pbp_data = _clean_dataset(pbp_data)
