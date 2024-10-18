@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 import data.drives as DataService_Drives
-import data.play_by_play as DataService_PBP
+import data.pbp as DataService_PBP
 
 
 # Const.
@@ -17,22 +17,22 @@ import data.play_by_play as DataService_PBP
 # Func
 
 def __add_possession_info_per_drive(
-        data: pd.DataFrame, 
+        pbp: pd.DataFrame, 
         drive_quarter:int, 
         drive_start_time:pd.Timedelta, 
         drive_end_time:pd.Timedelta, 
         team:str) -> pd.DataFrame:
     
-    mask = (data['Quarter'] == drive_quarter) & \
-    (data['Time'] <= drive_start_time) & \
-    (data['Time'] > drive_end_time)
+    mask = (pbp['Quarter'] == drive_quarter) & \
+    (pbp['Time'] <= drive_start_time) & \
+    (pbp['Time'] > drive_end_time)
 
-    data.loc[mask, "Possession"] = team
-    return data
+    pbp.loc[mask, "Possession"] = team
+    return pbp
 
-def __add_possession_info(df2: pd.DataFrame, df1:pd.DataFrame ) -> pd.DataFrame:
+def __add_possession_info(pbp: pd.DataFrame, drive:pd.DataFrame ) -> pd.DataFrame:
 
-    for _, drive_row in df1.iterrows():
+    for _, drive_row in drive.iterrows():
 
         drive_possession_team = drive_row["Team"]
         drive_start_time = drive_row['Time']
@@ -40,15 +40,15 @@ def __add_possession_info(df2: pd.DataFrame, df1:pd.DataFrame ) -> pd.DataFrame:
         drive_quarter = drive_row['Quarter']
         
         if drive_end_time >= pd.Timedelta(0):
-            df2 = __add_possession_info_per_drive(df2, drive_quarter, drive_start_time, drive_end_time, drive_possession_team)
+            pbp = __add_possession_info_per_drive(pbp, drive_quarter, drive_start_time, drive_end_time, drive_possession_team)
             
         else:
-            df2 = __add_possession_info_per_drive(df2, drive_quarter, drive_start_time, pd.Timedelta(0), drive_possession_team)
+            pbp = __add_possession_info_per_drive(pbp, drive_quarter, drive_start_time, pd.Timedelta(0), drive_possession_team)
 
-            df2 = __add_possession_info_per_drive(df2, drive_quarter+1, pd.Timedelta(minutes=15), drive_end_time+pd.Timedelta(15), drive_possession_team)
+            pbp = __add_possession_info_per_drive(pbp, drive_quarter+1, pd.Timedelta(minutes=15), drive_end_time+pd.Timedelta(15), drive_possession_team)
 
-    df2.loc[(df2['EPB'] == 0) & (df2['EPA'] == 0), 'Possession'] = df2['Possession'].shift()
-    return df2
+    pbp.loc[(pbp['EPB'] == 0) & (pbp['EPA'] == 0), 'Possession'] = pbp['Possession'].shift()
+    return pbp
 
 def __add_drive_counter(data:pd.DataFrame) -> pd.DataFrame:
     data['Drive_No'] = (data['Possession'] != data['Possession'].shift()).cumsum()
@@ -99,8 +99,8 @@ def get_pbp_data_agg(season: int, week: int, game: str):
     pbp = DataService_PBP.get_pbp_data(season, week, game)
     
     visitors, home = game.split("-at-")
-    drive_visitors = DataService_Drives.get_drive_data(2024, 6, visitors)
-    drive_home = DataService_Drives.get_drive_data(2024, 6, home)
+    drive_visitors = DataService_Drives.get_drive_data(season, week, visitors)
+    drive_home = DataService_Drives.get_drive_data(season, week, home)
 
     pbp = __add_possession_info(pbp, drive_visitors)
     pbp = __add_possession_info(pbp, drive_home)
@@ -114,14 +114,21 @@ def get_pbp_data_with_xp(season: int, week: int, game: str):
     pbp = pbp.groupby('Possession', group_keys=False).apply(__accumulate_max_to_next_group)
     return pbp
 
-def get_team_performance(team:str, side:str, data: pd.DataFrame):
+def __get_team_performance(team:str, data: pd.DataFrame, side: str):
     team_data = data[data['Possession'] == team]
+
     potential_performance = np.trapz(team_data['xP_cum'], x=team_data.index)
     actual_performance = np.trapz(team_data[side], x=team_data.index)
 
     relative_performance = int((actual_performance / potential_performance) *100)
 
     return relative_performance
+
+def get_performances(season: int, week: int, visitors:str, home: str) -> tuple:
+    data = get_pbp_data_with_xp(season, week, f"{visitors}-at-{home}")
+    visitors_performance = __get_team_performance(visitors, data, "Visitors")
+    home_performance = __get_team_performance(home, data, "Home")
+    return (visitors_performance, home_performance) 
 
 def main():
     return
